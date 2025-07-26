@@ -11,6 +11,7 @@ const VerificarHuellaPage: React.FC = () => {
     setMensaje("🔍 Escaneando huella...");
 
     try {
+      //ip del esp
       const response = await fetch("http://192.168.1.60/verificarHuella");
       const texto = await response.text();
 

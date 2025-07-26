@@ -35,7 +35,7 @@ const BotonHuellas: React.FC<BotonHuellasProps> = ({ userID, huellaCampo }) => {
   const registrarHuella = async () => {
     try {
       setMensaje("Coloca tu dedo en el sensor...");
-
+      //cambiar a la ip que se ocupe
       const response = await fetch("http://192.168.1.60/registrarHuella");
       const result = await response.json();
 

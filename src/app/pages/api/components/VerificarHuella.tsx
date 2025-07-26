@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/src/services/firebaseConfig";
 
+//metodo para verificar si una huella esta registrada
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse

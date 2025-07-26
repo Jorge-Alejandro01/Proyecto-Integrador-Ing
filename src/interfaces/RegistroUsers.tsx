@@ -11,7 +11,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "@/src/services/firebaseConfig";
-import BotonHuellas from "@/src/components/BotonHuellas"; // Importa el componente
+import BotonHuellas from "@/src/components/BotonHuellas";
 
 interface User {
   id: string;
@@ -29,14 +29,24 @@ const RegistroUsers: React.FC = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       const querySnapshot = await getDocs(collection(db, "users"));
-      const usersData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as User[];
+      const usersData = querySnapshot.docs
+        .map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            nombre: data.nombre ?? "",
+            matricula: data.matricula ?? "",
+            huella1: data.huella1 ?? "",
+            huella2: data.huella2 ?? "",
+          };
+        })
+        .filter((user) => user.nombre !== "" && user.matricula !== "");
+
       setUsers(usersData);
     };
+
     fetchUsers();
-  }, []); // Mantener el useEffect limpio y sin llamadas repetidas
+  }, []);
 
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => {
@@ -126,7 +136,7 @@ const RegistroUsers: React.FC = () => {
               ))
             ) : (
               <tr>
-                <td colSpan={5} className={styles.noDatos}>
+                <td colSpan={6} className={styles.noDatos}>
                   No hay usuarios registrados
                 </td>
               </tr>

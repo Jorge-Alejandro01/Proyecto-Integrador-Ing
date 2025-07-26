@@ -11,14 +11,14 @@ const VerificarHuellaPage: React.FC = () => {
     setMensaje("🔍 Escaneando huella...");
 
     try {
-      // Cambia esta IP por la de tu ESP
-      const response = await fetch("http://192.168.1.8/verificarHuella");
-      const result = await response.json();
+      const response = await fetch("http://192.168.1.60/verificarHuella");
+      const texto = await response.text();
 
-      if (result.registrado) {
-        setMensaje(`✅ Usuario registrado: ${result.nombre}`);
+      if (!response.ok) {
+        setMensaje("❌ Error al comunicarse con el ESP");
+        console.error("Error:", texto);
       } else {
-        setMensaje("❌ Este usuario no está registrado.");
+        setMensaje(texto.trim());
       }
     } catch (error) {
       console.error("Error al verificar huella:", error);

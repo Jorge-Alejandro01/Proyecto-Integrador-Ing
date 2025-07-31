@@ -14,6 +14,7 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (user: User) => void;
+  onSave: (user: Omit<User, "id">) => void;
   user?: User | null;
 }
 
@@ -99,6 +100,74 @@ const NewUserModal: React.FC<ModalProps> = ({
         <button onClick={onClose} className={styles.cancelButton}>
           Cancelar
         </button>
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.nombre || !formData.matricula) {
+      alert("Por favor, complete todos los campos requeridos");
+      return;
+    }
+    onSave(formData);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className={styles.modalOverlay}>
+      <div className={styles.modal}>
+        <div className={styles.modalHeader}>
+          <h2 className={styles.modalTitle}>
+            {user ? "Editar Usuario" : "Nuevo Usuario"}
+          </h2>
+          <button onClick={onClose} className={styles.closeButton}>
+            &times;
+          </button>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div className={styles.modalBody}>
+            <div className={styles.formGroup}>
+              <label htmlFor="nombre" className={styles.inputLabel}>
+                Nombre Completo *
+              </label>
+              <input
+                type="text"
+                id="nombre"
+                name="nombre"
+                placeholder="Ej: Juan Pérez"
+                value={formData.nombre}
+                onChange={handleChange}
+                className={styles.input}
+                required
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label htmlFor="matricula" className={styles.inputLabel}>
+                Matrícula *
+              </label>
+              <input
+                type="text"
+                id="matricula"
+                name="matricula"
+                placeholder="Ej: 123456"
+                value={formData.matricula}
+                onChange={handleChange}
+                className={styles.input}
+                required
+              />
+            </div>
+          </div>
+          <div className={styles.modalFooter}>
+            <button
+              type="button"
+              onClick={onClose}
+              className={styles.cancelButton}
+            >
+              Cancelar
+            </button>
+            <button type="submit" className={styles.button}>
+              {user ? "Actualizar Usuario" : "Guardar Usuario"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

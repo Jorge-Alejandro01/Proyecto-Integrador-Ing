@@ -25,7 +25,6 @@ const RegistroUsers: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-
   useEffect(() => {
     const fetchUsers = async () => {
       const querySnapshot = await getDocs(collection(db, "users"));
@@ -37,6 +36,36 @@ const RegistroUsers: React.FC = () => {
     };
     fetchUsers();
   }, []); // Mantener el useEffect limpio y sin llamadas repetidas
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true);
+      try {
+        const querySnapshot = await getDocs(collection(db, "users"));
+        const usersData = querySnapshot.docs
+          .map((doc) => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              nombre: data.nombre ?? "",
+              matricula: data.matricula ?? "",
+              huella1: data.huella1 ?? "",
+              huella2: data.huella2 ?? "",
+            };
+          })
+          .filter((user) => user.nombre !== "" && user.matricula !== "");
+
+        setUsers(usersData);
+      } catch (error) {
+        console.error("Error al obtener usuarios:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
 
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => {
@@ -57,6 +86,23 @@ const RegistroUsers: React.FC = () => {
       setUsers((prevUsers) => [...prevUsers, { ...newUser, id: docRef.id }]);
     }
     handleCloseModal();
+    try {
+      if (editingUser) {
+        await updateDoc(doc(db, "users", editingUser.id), newUser);
+        setUsers((prevUsers) =>
+          prevUsers.map((user) =>
+            user.id === editingUser.id ? { ...newUser, id: editingUser.id } : user
+          )
+        );
+      } else {
+        const docRef = await addDoc(collection(db, "users"), newUser);
+        setUsers((prevUsers) => [...prevUsers, { ...newUser, id: docRef.id }]);
+      }
+      handleCloseModal();
+    } catch (error) {
+      console.error("Error al guardar usuario:", error);
+      alert("Ocurrió un error al guardar el usuario.");
+    }
   };
 
   const handleEditUser = (user: User) => {
@@ -67,6 +113,15 @@ const RegistroUsers: React.FC = () => {
   const handleDeleteUser = async (id: string) => {
     await deleteDoc(doc(db, "users", id));
     setUsers((prevUsers) => prevUsers.filter((user) => user.id !== id));
+    if (confirm("¿Estás seguro de que deseas eliminar este usuario?")) {
+      try {
+        await deleteDoc(doc(db, "users", id));
+        setUsers((prevUsers) => prevUsers.filter((user) => user.id !== id));
+      } catch (error) {
+        console.error("Error al eliminar usuario:", error);
+        alert("Ocurrió un error al eliminar el usuario.");
+      }
+    }
   };
 
   return (
@@ -75,6 +130,13 @@ const RegistroUsers: React.FC = () => {
       <button onClick={handleOpenModal} className={styles.newButton}>
         Nuevo
       </button>
+      <div className={styles.header}>
+        <h2 className={styles.title}>Registro de Usuarios</h2>
+        <button onClick={handleOpenModal} className={styles.newButton}>
+          <i className="fas fa-plus"></i> Nuevo Usuario
+        </button>
+      </div>
+
       <NewUserModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
@@ -134,6 +196,76 @@ const RegistroUsers: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {loading ? (
+        <div className={styles.loading}>Cargando usuarios...</div>
+      ) : (
+        <div className={styles.tableContainer}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th style={{ width: '25%' }}>Nombre</th>
+                <th style={{ width: '15%' }}>Matrícula</th>
+                <th style={{ width: '15%' }}>Huella 1</th>
+                <th style={{ width: '15%' }}>Huella 2</th>
+                <th style={{ width: '15%' }}>Acciones</th>
+                <th style={{ width: '15%' }}>Permisos</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.length > 0 ? (
+                users.map((user) => (
+                  <tr key={user.id}>
+                    <td>{user.nombre || '-'}</td>
+                    <td>{user.matricula || '-'}</td>
+                    <td>
+                      {user.huella1 ? (
+                        '✅ Registrada'
+                      ) : (
+                        <BotonHuellas userID={user.id} huellaCampo="huella1" />
+                      )}
+                    </td>
+                    <td>
+                      {user.huella2 ? (
+                        '✅ Registrada'
+                      ) : (
+                        <BotonHuellas userID={user.id} huellaCampo="huella2" />
+                      )}
+                    </td>
+                    <td>
+                      <div className={styles.actionButtons}>
+                        <button
+                          onClick={() => handleEditUser(user)}
+                          className={`${styles.actionButton} ${styles.editButton}`}
+                        >
+                          <i className="fas fa-edit"></i> Editar
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user.id)}
+                          className={`${styles.actionButton} ${styles.deleteButton}`}
+                        >
+                          <i className="fas fa-trash-alt"></i> Eliminar
+                        </button>
+                      </div>
+                    </td>
+                    <td>
+                      <button className={`${styles.actionButton} ${styles.permisosButton}`}>
+                        <i className="fas fa-user-shield"></i> Permisos
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className={styles.noDatos}>
+                    No hay usuarios registrados
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };

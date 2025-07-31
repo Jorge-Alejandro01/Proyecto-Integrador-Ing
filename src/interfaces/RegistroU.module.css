@@ -1,4 +1,3 @@
-
 .container {
     text-align: center;
     font-family: Arial, sans-serif;
@@ -128,6 +127,184 @@
 .registroHuellas:hover{
   background-color: #0e2fc0;
 }
+/* Estilos generales */
+.container {
+  text-align: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  padding: 20px;
+  max-width: auto;
+  margin:  auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #2c3e50;
+  position: relative;
+  padding-bottom: 10px;
+  margin: 0;
+}
+
+.title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 3px;
+  background-color: #3498db;
+}
+
+/* Botones - Versión rediseñada */
+.button {
+  padding: 10px 20px;
+  margin: 5px;
+  background-color: #1a5276; /* Azul oscuro */
+  color: white;
+  border: none;
+  border-radius: 20px; /* Bordes muy redondeados */
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+}
+
+.button:hover {
+  background-color: #154360; /* Azul más oscuro al hover */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.button:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Botón nuevo usuario */
+.newButton {
+  composes: button;
+  background-color: #3498db; /* Azul más claro para destacar */
+}
+
+.newButton:hover {
+  background-color: #2980b9;
+}
+
+/* Botones de acción */
+.actionButton {
+  composes: button;
+}
+
+.editButton {
+  composes: actionButton;
+}
+
+.deleteButton {
+  composes: actionButton;
+  background-color: #c0392b; /* Rojo para eliminar */
+}
+
+.deleteButton:hover {
+  background-color: #a93226;
+}
+
+.permisosButton {
+  composes: actionButton;
+  background-color: #2874a6; /* Azul intermedio */
+}
+
+.permisosButton:hover {
+  background-color: #21618c;
+}
+
+/* Iconos para botones */
+.button i {
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+/* Tabla */
+.tableContainer {
+  width: 100%;
+  max-height: calc(100vh - 180px);
+  height: auto;
+  overflow: auto;
+  margin: 20px auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  position: relative;
+  flex-grow: 1;
+  background: white;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.table th, .table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+  word-wrap: break-word;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  background-color: #3498db;
+  color: white;
+  font-weight: 600;
+  z-index: 10;
+}
+
+.table tr {
+  height: 50px;
+}
+
+.table tbody tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.table tbody tr:hover {
+  background-color: #e8f4fc;
+}
+
+/* Scroll personalizado */
+.tableContainer::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.tableContainer::-webkit-scrollbar-thumb {
+  background: #3498db;
+  border-radius: 4px;
+}
+
+.tableContainer::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
 /* Modal */
 .modalOverlay {
   position: fixed;
@@ -140,6 +317,7 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  backdrop-filter: blur(3px);
 }
 
 .modal {
@@ -198,4 +376,145 @@
   text-align: center;
   color: #777;
   padding: 10px;
+  padding: 0;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 1001;
+  width: 90%;
+  max-width: 450px;
+  overflow: hidden;
+}
+
+.modalHeader {
+  padding: 20px;
+  border-bottom: 1px solid #ecf0f1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #3498db;
+  color: white;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: white;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.2s ease;
+}
+
+.closeButton:hover {
+  color: #f1f1f1;
+}
+
+.modalBody {
+  padding: 20px;
+}
+
+.formGroup {
+  margin-bottom: 20px;
+}
+
+.inputLabel {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border 0.3s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.modalFooter {
+  padding: 15px 20px;
+  border-top: 1px solid #ecf0f1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.cancelButton {
+  background-color: #95a5a6;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.cancelButton:hover {
+  background-color: #7f8c8d;
+}
+
+/* Estados */
+.noDatos {
+  text-align: center;
+  color: #7f8c8d;
+  padding: 20px;
+  font-style: italic;
+}
+
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #3498db;
+  font-size: 18px;
+}
+
+/* Contenedor de botones */
+.actionButtons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: 10px;
+  }
+  
+  .tableContainer {
+    max-height: calc(100vh - 150px);
+  }
+  
+  .table th, .table td {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+  
+  .button {
+    padding: 8px 12px;
+    font-size: 12px;
+    min-width: 70px;
+  }
+  
+  .actionButtons {
+    flex-direction: column;
+    gap: 5px;
+  }
 }

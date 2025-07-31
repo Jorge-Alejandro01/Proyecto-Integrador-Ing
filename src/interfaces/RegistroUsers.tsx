@@ -11,7 +11,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "@/src/services/firebaseConfig";
-import BotonHuellas from "@/src/components/BotonHuellas"; // Importa el componente
+import BotonHuellas from "@/src/components/BotonHuellas";
 
 interface User {
   id: string;
@@ -25,17 +25,6 @@ const RegistroUsers: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  useEffect(() => {
-    const fetchUsers = async () => {
-      const querySnapshot = await getDocs(collection(db, "users"));
-      const usersData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as User[];
-      setUsers(usersData);
-    };
-    fetchUsers();
-  }, []); // Mantener el useEffect limpio y sin llamadas repetidas
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -74,18 +63,6 @@ const RegistroUsers: React.FC = () => {
   };
 
   const handleSaveUser = async (newUser: Omit<User, "id">) => {
-    if (editingUser) {
-      await updateDoc(doc(db, "users", editingUser.id), newUser);
-      setUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user.id === editingUser.id ? { ...newUser, id: editingUser.id } : user
-        )
-      );
-    } else {
-      const docRef = await addDoc(collection(db, "users"), newUser);
-      setUsers((prevUsers) => [...prevUsers, { ...newUser, id: docRef.id }]);
-    }
-    handleCloseModal();
     try {
       if (editingUser) {
         await updateDoc(doc(db, "users", editingUser.id), newUser);
@@ -111,8 +88,6 @@ const RegistroUsers: React.FC = () => {
   };
 
   const handleDeleteUser = async (id: string) => {
-    await deleteDoc(doc(db, "users", id));
-    setUsers((prevUsers) => prevUsers.filter((user) => user.id !== id));
     if (confirm("¿Estás seguro de que deseas eliminar este usuario?")) {
       try {
         await deleteDoc(doc(db, "users", id));
@@ -126,10 +101,6 @@ const RegistroUsers: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.title}>Registro de Usuarios</h2>
-      <button onClick={handleOpenModal} className={styles.newButton}>
-        Nuevo
-      </button>
       <div className={styles.header}>
         <h2 className={styles.title}>Registro de Usuarios</h2>
         <button onClick={handleOpenModal} className={styles.newButton}>
@@ -143,59 +114,6 @@ const RegistroUsers: React.FC = () => {
         onSave={handleSaveUser}
         user={editingUser}
       />
-      <div className={styles.tableContainer}>
-        <table className={styles.table}>
-          <thead>
-            <tr className={styles.tableTitulos}>
-              <th>Nombre</th>
-              <th>Matrícula</th>
-              <th>Huella 1</th>
-              <th>Huella 2</th>
-              <th>Acciones</th>
-              <th>Permisos</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.length > 0 ? (
-              users.map((user) => (
-                <tr key={user.id}>
-                  <td>{user.nombre}</td>
-                  <td>{user.matricula}</td>
-                  <td>
-                    <BotonHuellas userID={user.id} huellaCampo="huella1" />
-                  </td>
-                  <td>
-                    <BotonHuellas userID={user.id} huellaCampo="huella2" />
-                  </td>
-                  <td>
-                    <button
-                      onClick={() => handleEditUser(user)}
-                      className={styles.editButton}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDeleteUser(user.id)}
-                      className={styles.deleteButton}
-                    >
-                      Eliminar
-                    </button>
-                  </td>
-                  <td>
-                    <button className={styles.permisosButton}>Permisos</button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={5} className={styles.noDatos}>
-                  No hay usuarios registrados
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
 
       {loading ? (
         <div className={styles.loading}>Cargando usuarios...</div>

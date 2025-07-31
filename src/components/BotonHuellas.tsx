@@ -35,8 +35,6 @@ const BotonHuellas: React.FC<BotonHuellasProps> = ({ userID, huellaCampo }) => {
   const registrarHuella = async () => {
     try {
       setMensaje("Coloca tu dedo en el sensor...");
-
-      const response = await fetch("http://192.168.1.28/obtenerHuella");
       //cambiar a la ip que se ocupe
       const response = await fetch("http://192.168.1.60/registrarHuella");
       const result = await response.json();
@@ -46,14 +44,6 @@ const BotonHuellas: React.FC<BotonHuellasProps> = ({ userID, huellaCampo }) => {
         const userDoc = await getDoc(userDocRef);
 
         if (!userDoc.exists()) {
-          await setDoc(userDocRef, { [huellaCampo]: result.huella });
-        } else {
-          await updateDoc(userDocRef, { [huellaCampo]: result.huella });
-        }
-
-        setHuellaRegistrada(true);
-        setMensaje("✅ Huella registrada con éxito");
-
           await setDoc(userDocRef, { [huellaCampo]: result.huellaID });
         } else {
           await updateDoc(userDocRef, { [huellaCampo]: result.huellaID });

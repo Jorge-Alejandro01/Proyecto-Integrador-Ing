@@ -13,17 +13,11 @@ interface User {
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (user: User) => void;
-  onSave: (user: Omit<User, "id">) => void;
+  onSave: (user: User | Omit<User, "id">) => void;
   user?: User | null;
 }
 
-const NewUserModal: React.FC<ModalProps> = ({
-  isOpen,
-  onClose,
-  onSave,
-  user,
-}) => {
+const NewUserModal: React.FC<ModalProps> = ({ isOpen, onClose, onSave, user }) => {
   const [formData, setFormData] = useState<Omit<User, "id">>({
     nombre: "",
     matricula: "",
@@ -59,9 +53,10 @@ const NewUserModal: React.FC<ModalProps> = ({
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   };
 
-  const handleSave = () => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     if (!formData.nombre || !formData.matricula) {
-      alert("Por favor, llena todos los campos");
+      alert("Por favor, complete todos los campos requeridos");
       return;
     }
 
@@ -72,44 +67,6 @@ const NewUserModal: React.FC<ModalProps> = ({
     onSave(newUser);
     onClose();
   };
-
-  return (
-    <div className={styles.modalOverlay}>
-      <div className={styles.modal}>
-        <h2>{user ? "Editar Usuario" : "Registrar Nuevo Usuario"}</h2>
-        <input
-          type="text"
-          name="nombre"
-          placeholder="Nombre"
-          value={formData.nombre}
-          onChange={handleChange}
-          className={styles.input}
-        />
-        <input
-          type="text"
-          name="matricula"
-          placeholder="Matrícula"
-          value={formData.matricula}
-          onChange={handleChange}
-          className={styles.input}
-        />
-
-        <button onClick={handleSave} className={styles.button}>
-          Guardar
-        </button>
-        <button onClick={onClose} className={styles.cancelButton}>
-          Cancelar
-        </button>
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.nombre || !formData.matricula) {
-      alert("Por favor, complete todos los campos requeridos");
-      return;
-    }
-    onSave(formData);
-  };
-
-  if (!isOpen) return null;
 
   return (
     <div className={styles.modalOverlay}>
@@ -156,11 +113,7 @@ const NewUserModal: React.FC<ModalProps> = ({
             </div>
           </div>
           <div className={styles.modalFooter}>
-            <button
-              type="button"
-              onClick={onClose}
-              className={styles.cancelButton}
-            >
+            <button type="button" onClick={onClose} className={styles.cancelButton}>
               Cancelar
             </button>
             <button type="submit" className={styles.button}>

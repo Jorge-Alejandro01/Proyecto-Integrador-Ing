@@ -1,6 +1,7 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import styles from "@/src/interfaces/RegistroU.module.css";
+
+import React, { useEffect } from "react";
+import { Modal, Form, Input, message } from "antd";
 
 interface User {
   id: string;
@@ -18,111 +19,55 @@ interface ModalProps {
 }
 
 const NewUserModal: React.FC<ModalProps> = ({ isOpen, onClose, onSave, user }) => {
-  const [formData, setFormData] = useState<Omit<User, "id">>({
-    nombre: "",
-    matricula: "",
-    huella1: "",
-    huella2: "",
-  });
+  const [form] = Form.useForm(); // Mover esta línea dentro del componente
 
   useEffect(() => {
     if (user) {
-      setFormData({
+      form.setFieldsValue({
         nombre: user.nombre,
         matricula: user.matricula,
-        huella1: user.huella1,
-        huella2: user.huella2,
       });
     } else {
-      setFormData({
-        nombre: "",
-        matricula: "",
-        huella1: "",
-        huella2: "",
-      });
+      form.resetFields();
     }
-  }, [user, isOpen]);
+  }, [user, isOpen, form]);
 
-  if (!isOpen) return null;
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const generateId = () => {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.nombre || !formData.matricula) {
-      alert("Por favor, complete todos los campos requeridos");
-      return;
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      onSave(user ? { ...values, id: user.id } : values);
+      onClose();
+    } catch (error) {
+      message.error("Por favor complete los campos requeridos");
     }
-
-    const newUser = user
-      ? { ...formData, id: user.id }
-      : { ...formData, id: generateId() };
-
-    onSave(newUser);
-    onClose();
   };
 
   return (
-    <div className={styles.modalOverlay}>
-      <div className={styles.modal}>
-        <div className={styles.modalHeader}>
-          <h2 className={styles.modalTitle}>
-            {user ? "Editar Usuario" : "Nuevo Usuario"}
-          </h2>
-          <button onClick={onClose} className={styles.closeButton}>
-            &times;
-          </button>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div className={styles.modalBody}>
-            <div className={styles.formGroup}>
-              <label htmlFor="nombre" className={styles.inputLabel}>
-                Nombre Completo *
-              </label>
-              <input
-                type="text"
-                id="nombre"
-                name="nombre"
-                placeholder="Ej: Juan Pérez"
-                value={formData.nombre}
-                onChange={handleChange}
-                className={styles.input}
-                required
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label htmlFor="matricula" className={styles.inputLabel}>
-                Matrícula *
-              </label>
-              <input
-                type="text"
-                id="matricula"
-                name="matricula"
-                placeholder="Ej: 123456"
-                value={formData.matricula}
-                onChange={handleChange}
-                className={styles.input}
-                required
-              />
-            </div>
-          </div>
-          <div className={styles.modalFooter}>
-            <button type="button" onClick={onClose} className={styles.cancelButton}>
-              Cancelar
-            </button>
-            <button type="submit" className={styles.button}>
-              {user ? "Actualizar Usuario" : "Guardar Usuario"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <Modal
+      title={user ? "Editar Usuario" : "Nuevo Usuario"}
+      open={isOpen}
+      onCancel={onClose}
+      onOk={handleSubmit}
+      okText={user ? "Actualizar" : "Guardar"}
+      cancelText="Cancelar"
+    >
+      <Form layout="vertical" form={form}> {/* Asegúrate de pasar la prop form */}
+        <Form.Item
+          label="Nombre Completo"
+          name="nombre"
+          rules={[{ required: true, message: "El nombre es obligatorio" }]}
+        >
+          <Input placeholder="Ej: Juan Pérez" />
+        </Form.Item>
+        <Form.Item
+          label="Matrícula"
+          name="matricula"
+          rules={[{ required: true, message: "La matrícula es obligatoria" }]}
+        >
+          <Input placeholder="Ej: 123456" />
+        </Form.Item>
+      </Form>
+    </Modal>
   );
 };
 

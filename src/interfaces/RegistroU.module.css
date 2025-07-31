@@ -26,6 +26,13 @@
   position: relative;
   padding-bottom: 10px;
   margin: 0;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
 }
 
 .title::after {

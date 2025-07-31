@@ -35,8 +35,9 @@ const BotonHuellas: React.FC<BotonHuellasProps> = ({ userID, huellaCampo }) => {
   const registrarHuella = async () => {
     try {
       setMensaje("Coloca tu dedo en el sensor...");
+      await new Promise((resolve) => setTimeout(resolve, 5000));
       //cambiar a la ip que se ocupe
-      const response = await fetch("http://192.168.1.60/registrarHuella");
+      const response = await fetch("http://192.168.1.43/registrarHuella");
       const result = await response.json();
 
       if (result.status === "success") {
@@ -50,9 +51,15 @@ const BotonHuellas: React.FC<BotonHuellasProps> = ({ userID, huellaCampo }) => {
         }
 
         setHuellaRegistrada(true);
-        setMensaje(`✅ Huella registrada con ID ${result.huellaID}`);
+        setMensaje(`Huella registrada ✅`);
+        setTimeout(() => {
+          setMensaje(""); // Borra el mensaje después de 5 segundos
+        }, 2500);
       } else {
         setMensaje("❌ Error al registrar la huella");
+        setTimeout(() => {
+          setMensaje(""); // Borra el mensaje después de 5 segundos
+        }, 2500);
       }
     } catch (error) {
       console.error("Error al registrar la huella:", error);

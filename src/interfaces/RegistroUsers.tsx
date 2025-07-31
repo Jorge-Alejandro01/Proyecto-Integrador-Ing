@@ -1,7 +1,10 @@
 "use client";
+
 import React, { useState, useEffect } from "react";
+import Link from "next/link"; 
 import styles from "@/src/interfaces/RegistroU.module.css";
 import NewUserModal from "@/src/components/NewUserModal";
+import BotonHuellas from "@/src/components/BotonHuellas";
 import {
   collection,
   addDoc,
@@ -9,9 +12,10 @@ import {
   deleteDoc,
   doc,
   updateDoc,
+  setDoc,
 } from "firebase/firestore";
 import { db } from "@/src/services/firebaseConfig";
-import BotonHuellas from "@/src/components/BotonHuellas";
+import { Modal, Checkbox, message, Tag } from "antd";
 
 interface User {
   id: string;
@@ -26,6 +30,12 @@ const RegistroUsers: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [areas, setAreas] = useState<{ id: string; nombre: string }[]>([]);
+  const [permisosSeleccionados, setPermisosSeleccionados] = useState<string[]>([]);
+  const [modalPermisosVisible, setModalPermisosVisible] = useState(false);
+  const [permisosPorUsuario, setPermisosPorUsuario] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -46,6 +56,18 @@ const RegistroUsers: React.FC = () => {
           .filter((user) => user.nombre !== "" && user.matricula !== "");
 
         setUsers(usersData);
+
+        const permisosSnap = await getDocs(collection(db, "permisos"));
+        const permisos = permisosSnap.docs.map((doc) => doc.data());
+        const agrupados: Record<string, string[]> = {};
+        permisos.forEach((perm) => {
+          if (perm.habilitado) {
+            if (!agrupados[perm.userID]) agrupados[perm.userID] = [];
+            agrupados[perm.userID].push(perm.areaID);
+          }
+        });
+        setPermisosPorUsuario(agrupados);
+
       } catch (error) {
         console.error("Error al obtener usuarios:", error);
       } finally {
@@ -99,14 +121,80 @@ const RegistroUsers: React.FC = () => {
     }
   };
 
+  const abrirPermisos = async (user: User) => {
+    setSelectedUser(user);
+    setModalPermisosVisible(true);
+
+    const areasSnap = await getDocs(collection(db, "areas"));
+    const todasLasAreas = areasSnap.docs.map((doc) => ({
+      id: doc.id,
+      nombre: doc.data().nombre,
+    }));
+    setAreas(todasLasAreas);
+
+    const permisosSnap = await getDocs(collection(db, "permisos"));
+    const permisosDelUsuario = permisosSnap.docs
+      .map((doc) => doc.data())
+      .filter((perm) => perm.userID === user.id && perm.habilitado)
+      .map((perm) => perm.areaID);
+
+    setPermisosSeleccionados(permisosDelUsuario);
+  };
+
+  const guardarPermisos = async () => {
+    try {
+      if (!selectedUser) return;
+
+      for (const area of areas) {
+        const habilitado = permisosSeleccionados.includes(area.id);
+        await setDoc(doc(db, "permisos", `${selectedUser.id}_${area.id}`), {
+          userID: selectedUser.id,
+          areaID: area.id,
+          habilitado,
+        });
+      }
+
+      setPermisosPorUsuario((prev) => ({
+        ...prev,
+        [selectedUser.id]: [...permisosSeleccionados],
+      }));
+
+      message.success("Permisos actualizados correctamente");
+      setModalPermisosVisible(false);
+      setSelectedUser(null);
+    } catch (error) {
+      console.error("Error al guardar permisos:", error);
+      message.error("Ocurrió un error al guardar los permisos");
+    }
+  };
+
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h2 className={styles.title}>Registro de Usuarios</h2>
+      <h2 className={styles.title}>Registro de Usuarios</h2>
+      <div className={styles.actions}>
+        <Link href="/areas">
+          <button
+            style={{
+              backgroundColor: "#3498db",
+              color: "white",
+              borderRadius: "9999px",
+              padding: "8px 16px",
+              border: "none",
+              cursor: "pointer",
+              fontWeight: "bold",
+              marginRight: "10px",
+            }}
+          >
+            Ir a Áreas
+          </button>
+        </Link>
+        <div className={styles.header}></div>
         <button onClick={handleOpenModal} className={styles.newButton}>
           <i className="fas fa-plus"></i> Nuevo Usuario
         </button>
       </div>
+
+
 
       <NewUserModal
         isOpen={isModalOpen}
@@ -122,32 +210,39 @@ const RegistroUsers: React.FC = () => {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th style={{ width: '25%' }}>Nombre</th>
-                <th style={{ width: '15%' }}>Matrícula</th>
-                <th style={{ width: '15%' }}>Huella 1</th>
-                <th style={{ width: '15%' }}>Huella 2</th>
-                <th style={{ width: '15%' }}>Acciones</th>
-                <th style={{ width: '15%' }}>Permisos</th>
+                <th style={{ width: "20%" }}>Nombre</th>
+                <th style={{ width: "15%" }}>Matrícula</th>
+                <th style={{ width: "15%" }}>Huella 1</th>
+                <th style={{ width: "15%" }}>Huella 2</th>
+                <th style={{ width: "15%" }}>Permisos</th>
+                <th style={{ width: "20%" }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {users.length > 0 ? (
                 users.map((user) => (
                   <tr key={user.id}>
-                    <td>{user.nombre || '-'}</td>
-                    <td>{user.matricula || '-'}</td>
+                    <td>{user.nombre || "-"}</td>
+                    <td>{user.matricula || "-"}</td>
                     <td>
                       {user.huella1 ? (
-                        '✅ Registrada'
+                        "✅ Registrada"
                       ) : (
                         <BotonHuellas userID={user.id} huellaCampo="huella1" />
                       )}
                     </td>
                     <td>
                       {user.huella2 ? (
-                        '✅ Registrada'
+                        "✅ Registrada"
                       ) : (
                         <BotonHuellas userID={user.id} huellaCampo="huella2" />
+                      )}
+                    </td>
+                    <td>
+                      {permisosPorUsuario[user.id]?.length ? (
+                        <Tag color="blue">{permisosPorUsuario[user.id].length} asignado(s)</Tag>
+                      ) : (
+                        <Tag color="red">Sin acceso</Tag>
                       )}
                     </td>
                     <td>
@@ -164,12 +259,13 @@ const RegistroUsers: React.FC = () => {
                         >
                           <i className="fas fa-trash-alt"></i> Eliminar
                         </button>
+                        <button
+                          className={`${styles.actionButton} ${styles.permisosButton}`}
+                          onClick={() => abrirPermisos(user)}
+                        >
+                          <i className="fas fa-user-shield"></i> Permisos
+                        </button>
                       </div>
-                    </td>
-                    <td>
-                      <button className={`${styles.actionButton} ${styles.permisosButton}`}>
-                        <i className="fas fa-user-shield"></i> Permisos
-                      </button>
                     </td>
                   </tr>
                 ))
@@ -184,6 +280,30 @@ const RegistroUsers: React.FC = () => {
           </table>
         </div>
       )}
+
+      <Modal
+        title={`Permisos de acceso: ${selectedUser?.nombre}`}
+        open={modalPermisosVisible}
+        onCancel={() => setModalPermisosVisible(false)}
+        onOk={guardarPermisos}
+        okText="Guardar"
+        cancelText="Cancelar"
+      >
+        {areas.length === 0 ? (
+          <p>No hay áreas registradas.</p>
+        ) : (
+          <Checkbox.Group
+            value={permisosSeleccionados}
+            onChange={(val) => setPermisosSeleccionados(val as string[])}
+          >
+            {areas.map((area) => (
+              <div key={area.id} style={{ marginBottom: 8 }}>
+                <Checkbox value={area.id}>{area.nombre}</Checkbox>
+              </div>
+            ))}
+          </Checkbox.Group>
+        )}
+      </Modal>
     </div>
   );
 };

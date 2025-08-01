@@ -12,7 +12,8 @@ const VerificarHuellaPage: React.FC = () => {
 
     try {
       //ip del esp
-      const response = await fetch("http://192.168.1.60/verificarHuella");
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      const response = await fetch("http://192.168.1.71/verificarHuella");
       const texto = await response.text();
 
       if (!response.ok) {

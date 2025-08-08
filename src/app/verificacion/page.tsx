@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 
+const NOMBRE_AREA = "Laboratorio"; // Cambia esto según el área
+
 const VerificarHuellaPage: React.FC = () => {
   const [mensaje, setMensaje] = useState("");
   const [verificando, setVerificando] = useState(false);
@@ -11,20 +13,45 @@ const VerificarHuellaPage: React.FC = () => {
     setMensaje("🔍 Escaneando huella...");
 
     try {
-      //ip del esp
+      // 1. Esperamos que el usuario ponga el dedo y ESP lea la huella
       await new Promise((resolve) => setTimeout(resolve, 5000));
-      const response = await fetch("http://192.168.1.71/verificarHuella");
+
+      const response = await fetch("http://192.168.1.43/verificarHuella");
       const texto = await response.text();
 
       if (!response.ok) {
         setMensaje("❌ Error al comunicarse con el ESP");
-        console.error("Error:", texto);
+        return;
+      }
+
+      const idMatch = texto.match(/ID: (\d+)/);
+      if (!idMatch) {
+        setMensaje("❌ No se pudo leer huella: " + texto.trim());
+        return;
+      }
+
+      const huellaID = parseInt(idMatch[1]);
+      setMensaje("🧠 Consultando permisos para ID " + huellaID + "...");
+
+      // 2. Consultar a tu backend Next.js
+      const accesoRes = await fetch("/api/verificarAcceso", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ huellaID, area: NOMBRE_AREA }),
+      });
+
+      const datos = await accesoRes.json();
+
+      if (datos.acceso) {
+        setMensaje(`✅ Acceso permitido: ${datos.nombre} (${datos.matricula})`);
       } else {
-        setMensaje(texto.trim());
+        setMensaje("⛔ Acceso denegado");
       }
     } catch (error) {
-      console.error("Error al verificar huella:", error);
-      setMensaje("❌ No se pudo conectar al verificador.");
+      console.error("Error:", error);
+      setMensaje("❌ Error general");
     }
 
     setVerificando(false);

@@ -33,10 +33,11 @@ import {
   TeamOutlined,
   UserSwitchOutlined,
 } from "@ant-design/icons";
-
 export default function RegistroAreas() {
   const [areas, setAreas] = useState<Area[]>([]);
-  const [usuarios, setUsuarios] = useState<{ id: string; nombre: string }[]>([]);
+  const [usuarios, setUsuarios] = useState<{ id: string; nombre: string }[]>(
+    []
+  );
   const [permisos, setPermisos] = useState<Record<string, string[]>>({});
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<Area | null>(null);
@@ -44,7 +45,9 @@ export default function RegistroAreas() {
   const [modalUsuarios, setModalUsuarios] = useState(false);
   const [modalEdicion, setModalEdicion] = useState(false);
   const [areaSeleccionada, setAreaSeleccionada] = useState<Area | null>(null);
-  const [usuariosSeleccionados, setUsuariosSeleccionados] = useState<string[]>([]);
+  const [usuariosSeleccionados, setUsuariosSeleccionados] = useState<string[]>(
+    []
+  );
 
   const cargarDatos = async () => {
     const [areasSnap, usersSnap, permisosSnap] = await Promise.all([
@@ -53,20 +56,24 @@ export default function RegistroAreas() {
       getDocs(collection(db, "permisos")),
     ]);
 
-    const areasData = areasSnap.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Area[];
+    const areasData = areasSnap.docs.map(
+      (doc: FirebaseFirestore.DocumentData) => ({
+        id: doc.id,
+        ...doc.data(),
+      })
+    ) as Area[];
     setAreas(areasData);
 
-    const usuariosData = usersSnap.docs.map((doc) => ({
-      id: doc.id,
-      nombre: doc.data().nombre,
-    }));
+    const usuariosData = usersSnap.docs.map(
+      (doc: FirebaseFirestore.DocumentData) => ({
+        id: doc.id,
+        nombre: doc.data().nombre,
+      })
+    );
     setUsuarios(usuariosData);
 
     const permisosPorArea: Record<string, string[]> = {};
-    permisosSnap.docs.forEach((doc) => {
+    permisosSnap.docs.forEach((doc: FirebaseFirestore.DocumentData) => {
       const data = doc.data();
       if (data.habilitado) {
         if (!permisosPorArea[data.areaID]) permisosPorArea[data.areaID] = [];
@@ -101,7 +108,7 @@ export default function RegistroAreas() {
       }
 
       setModalOpen(false);
-    } catch (error) {
+    } catch {
       // Validación fallida
     }
   };
@@ -163,12 +170,13 @@ export default function RegistroAreas() {
       title: "Descripción",
       dataIndex: "descripcion",
       key: "descripcion",
-      render: (text: string) => text || <i style={{ color: '#999' }}>Sin descripción</i>,
+      render: (text: string) =>
+        text || <i style={{ color: "#999" }}>Sin descripción</i>,
     },
     {
       title: "Usuarios con acceso",
       key: "usuarios",
-      render: (_: any, area: Area) => {
+      render: (_: unknown, area: Area) => {
         const usuariosIds = permisos[area.id] || [];
         const nombres = usuariosIds
           .map((id) => usuarios.find((u) => u.id === id)?.nombre)
@@ -181,7 +189,9 @@ export default function RegistroAreas() {
           <Space direction="vertical">
             <Space wrap>
               {primeros.map((nombre, idx) => (
-                <Tag key={idx} color="geekblue">{nombre}</Tag>
+                <Tag key={idx} color="geekblue">
+                  {nombre}
+                </Tag>
               ))}
               {restantes > 0 && (
                 <Button
@@ -195,7 +205,9 @@ export default function RegistroAreas() {
                   Ver más ({restantes})
                 </Button>
               )}
-              {nombres.length === 0 && <span style={{ color: '#999' }}>Sin usuarios</span>}
+              {nombres.length === 0 && (
+                <span style={{ color: "#999" }}>Sin usuarios</span>
+              )}
             </Space>
             <Button
               size="small"
@@ -211,7 +223,7 @@ export default function RegistroAreas() {
     {
       title: "Acciones",
       key: "acciones",
-      render: (_: any, record: Area) => (
+      render: (_: unknown, record: Area) => (
         <Space>
           <Button icon={<EditOutlined />} onClick={() => editarArea(record)}>
             Editar
@@ -229,9 +241,17 @@ export default function RegistroAreas() {
   ];
 
   return (
-    <div style={{ padding: 32, backgroundColor: "#f6f8fa", minHeight: "100vh" }}>
+    <div
+      style={{ padding: 32, backgroundColor: "#f6f8fa", minHeight: "100vh" }}
+    >
       <div style={{ maxWidth: 1000, margin: "0 auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: 24,
+          }}
+        >
           <div>
             <Typography.Title level={3} style={{ margin: 0 }}>
               Gestión de Áreas
@@ -245,7 +265,9 @@ export default function RegistroAreas() {
           </Button>
         </div>
 
-        <Card style={{ borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+        <Card
+          style={{ borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
+        >
           {areas.length === 0 ? (
             <Empty description="No hay áreas registradas" />
           ) : (

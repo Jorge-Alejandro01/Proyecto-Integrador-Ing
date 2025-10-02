@@ -16,6 +16,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/src/services/firebaseConfig";
 import { Modal, Checkbox, message, Tag } from "antd";
+import { QueryDocumentSnapshot } from "firebase-functions/firestore";
 
 interface User {
   id: string;
@@ -47,7 +48,8 @@ const RegistroUsers: React.FC = () => {
       try {
         const querySnapshot = await getDocs(collection(db, "users"));
         const usersData = querySnapshot.docs
-          .map((doc) => {
+          .map((doc: QueryDocumentSnapshot) => {
+            ///error aqui
             const data = doc.data();
             return {
               id: doc.id,
@@ -57,14 +59,21 @@ const RegistroUsers: React.FC = () => {
               huella2: data.huella2 ?? "",
             };
           })
-          .filter((user) => user.nombre !== "" && user.matricula !== "");
+          .filter((user: User) => user.nombre !== "" && user.matricula !== "");
 
         setUsers(usersData);
 
         const permisosSnap = await getDocs(collection(db, "permisos"));
-        const permisos = permisosSnap.docs.map((doc) => doc.data());
+        const permisos = permisosSnap.docs.map((doc: QueryDocumentSnapshot) =>
+          doc.data()
+        );
+        interface Permiso {
+          userID: string;
+          areaID: string;
+          habilitado: boolean;
+        }
         const agrupados: Record<string, string[]> = {};
-        permisos.forEach((perm) => {
+        permisos.forEach((perm: Permiso) => {
           if (perm.habilitado) {
             if (!agrupados[perm.userID]) agrupados[perm.userID] = [];
             agrupados[perm.userID].push(perm.areaID);
@@ -131,17 +140,23 @@ const RegistroUsers: React.FC = () => {
     setModalPermisosVisible(true);
 
     const areasSnap = await getDocs(collection(db, "areas"));
-    const todasLasAreas = areasSnap.docs.map((doc) => ({
+    const todasLasAreas = areasSnap.docs.map((doc: QueryDocumentSnapshot) => ({
       id: doc.id,
       nombre: doc.data().nombre,
     }));
     setAreas(todasLasAreas);
 
+    interface Permiso {
+      userID: string;
+      areaID: string;
+      habilitado: boolean;
+    }
+
     const permisosSnap = await getDocs(collection(db, "permisos"));
     const permisosDelUsuario = permisosSnap.docs
-      .map((doc) => doc.data())
-      .filter((perm) => perm.userID === user.id && perm.habilitado)
-      .map((perm) => perm.areaID);
+      .map((doc: QueryDocumentSnapshot) => doc.data() as Permiso)
+      .filter((perm: Permiso) => perm.userID === user.id && perm.habilitado)
+      .map((perm: Permiso) => perm.areaID);
 
     setPermisosSeleccionados(permisosDelUsuario);
   };

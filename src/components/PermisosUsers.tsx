@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import styles from "@/src/interfaces/RegistroU.module.css";
 import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
 import { db } from "@/src/services/firebaseConfig";
+import { QueryDocumentSnapshot } from "firebase-functions/firestore";
 
 interface User {
   id: string;
@@ -27,10 +28,12 @@ const PermisosUsers: React.FC = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       const querySnapshot = await getDocs(collection(db, "users"));
-      const usersData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as User[];
+      const usersData = querySnapshot.docs.map(
+        (doc: QueryDocumentSnapshot) => ({
+          id: doc.id,
+          ...doc.data(),
+        })
+      ) as User[];
       setUsers(usersData);
       setLoading(false);
     };

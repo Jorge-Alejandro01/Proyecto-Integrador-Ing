@@ -16,7 +16,7 @@ const VerificarHuellaPage: React.FC = () => {
       // 1. Esperamos que el usuario ponga el dedo y ESP lea la huella
       await new Promise((resolve) => setTimeout(resolve, 5000));
 
-      const response = await fetch("http://192.168.1.43/verificarHuella");
+      const response = await fetch("http://192.168.1.158/verificarHuella");
       const texto = await response.text();
 
       if (!response.ok) {

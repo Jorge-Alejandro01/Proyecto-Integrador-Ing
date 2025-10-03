@@ -2,50 +2,63 @@ pipeline {
     agent any
 
     environment {
-        BLUE_PORT = "3000"
-        GREEN_PORT = "3001"
+        DOCKER_IMAGE = "mi-app"             // Nombre de la imagen
+        CONTAINER_NAME = "mi-app-container" // Nombre del contenedor
+        PORT = "3000"                       // Puerto donde correrá la app
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/Jorge-Alejandro01/Proyecto-Integrador-Ing.git'
+                echo "Clonando el repositorio desde GitHub..."
+                checkout scm
             }
         }
 
-        stage('Build') {
+        stage('Build Docker Image') {
             steps {
-                sh 'npm install'
-                sh 'npm run build'
-            }
-        }
-
-        stage('Deploy to Inactive') {
-            steps {
+                echo "Construyendo la imagen Docker..."
                 script {
-                    def activePort = sh(returnStdout: true, script: "grep 'proxy_pass' /etc/nginx/sites-available/default | grep -o '[0-9]*'").trim()
-                    def targetPort = (activePort == env.BLUE_PORT) ? env.GREEN_PORT : env.BLUE_PORT
-
-                    sh "fuser -k ${targetPort}/tcp || true"
-
-                    sh "nohup npm start -p ${targetPort} > app_${targetPort}.log 2>&1 &"
+                    sh "docker build -t ${DOCKER_IMAGE}:latest ."
                 }
             }
         }
 
-        stage('Switch Traffic') {
+        stage('Stop Old Container') {
             steps {
+                echo "Deteniendo y eliminando contenedor anterior (si existe)..."
                 script {
-                    def activePort = sh(returnStdout: true, script: "grep 'proxy_pass' /etc/nginx/sites-available/default | grep -o '[0-9]*'").trim()
-                    def targetPort = (activePort == env.BLUE_PORT) ? env.GREEN_PORT : env.BLUE_PORT
-
-                    // Cambiamos configuración de Nginx para apuntar al target
-                    sh """
-                        sudo sed -i 's/${activePort}/${targetPort}/' /etc/nginx/sites-available/default
-                        sudo systemctl reload nginx
-                    """
+                    // Esto asegura que no choque con uno viejo
+                    sh "docker rm -f ${CONTAINER_NAME} || true"
                 }
             }
+        }
+
+        stage('Run New Container') {
+            steps {
+                echo "Levantando nuevo contenedor..."
+                script {
+                    sh "docker run -d --name ${CONTAINER_NAME} -p ${PORT}:${PORT} ${DOCKER_IMAGE}:latest"
+                }
+            }
+        }
+
+        stage('Verify Container') {
+            steps {
+                echo "Mostrando contenedores en ejecución..."
+                script {
+                    sh "docker ps"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Despliegue exitoso: la app está corriendo en http://localhost:${PORT}"
+        }
+        failure {
+            echo "❌ Error durante el despliegue"
         }
     }
 }

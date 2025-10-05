@@ -20,7 +20,7 @@ pipeline {
             steps {
                 script {
                     echo "Construyendo la imagen Docker..."
-                    sh 'docker build -t ${IMAGE_NAME} .'
+                    bat 'docker build -t ${IMAGE_NAME} .'
                 }
             }
         }
@@ -29,7 +29,7 @@ pipeline {
             steps {
                 script {
                     echo "Verificando si existe un contenedor previo..."
-                    sh """
+                    bat """
                         if [ \$(docker ps -aq -f name=${CONTAINER_NAME}) ]; then
                             echo "Deteniendo y eliminando contenedor anterior..."
                             docker stop ${CONTAINER_NAME} || true
@@ -44,7 +44,7 @@ pipeline {
             steps {
                 script {
                     echo "Iniciando nueva versión de la aplicación..."
-                    sh 'docker run -d -p 3000:3000 --name ${CONTAINER_NAME} ${IMAGE_NAME}'
+                    bat 'docker run -d -p 3000:3000 --name ${CONTAINER_NAME} ${IMAGE_NAME}'
                 }
             }
         }

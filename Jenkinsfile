@@ -3,8 +3,11 @@ pipeline {
 
     stages {
         stage('Clonar repositorio') {
+                        stage('Clonar repositorio') {
             steps {
-                git branch: 'main', url: 'https://github.com/Jorge-Alejandro01/Proyecto-Integrador-Ing.git'
+                git branch: 'main',
+                    credentialsId: 'github-token',
+                    url: 'https://github.com/TU_USUARIO/TU_REPO.git'
             }
         }
 

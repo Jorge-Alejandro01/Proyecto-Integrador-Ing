@@ -30,17 +30,15 @@ pipeline {
             steps {
                 script {
                     echo "Verificando si existe un contenedor previo..."
+                    // ✅ versión segura que no detiene el pipeline si no hay contenedor
                     bat '''
-                        docker ps -aq -f "name=%CONTAINER_NAME%" > tmp.txt
-                        set /p CONTAINER=<tmp.txt
-                        if not "%CONTAINER%"=="" (
-                            echo Deteniendo y eliminando contenedor anterior...
+                        echo Buscando contenedor anterior...
+                        for /f "delims=" %%i in ('docker ps -aq -f "name=%CONTAINER_NAME%"') do (
+                            echo Contenedor encontrado, deteniendo...
                             docker stop %CONTAINER_NAME% || exit /b 0
                             docker rm %CONTAINER_NAME% || exit /b 0
-                        ) else (
-                            echo No se encontró ningún contenedor previo.
                         )
-                        del tmp.txt
+                        echo Verificación completada.
                     '''
                 }
             }

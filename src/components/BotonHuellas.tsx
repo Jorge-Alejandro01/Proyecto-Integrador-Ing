@@ -1,85 +1,81 @@
-import React, { useEffect, useState } from "react";
-import { db } from "@/src/services/firebaseConfig";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import styles from "@/src/interfaces/RegistroU.module.css";
+// ASUMIENDO QUE ESTE ES TU ARCHIVO BotonHuellas.tsx
+"use client";
+import React, { useState } from 'react';
+import { updateDoc, doc } from 'firebase/firestore';
+import { db } from '@/src/services/firebaseConfig'; // Asegúrate que la ruta sea correcta
+import { Button, message } from 'antd'; // Usaremos 'antd' para la UI
+
 interface BotonHuellasProps {
-  userID: string;
-  huellaCampo: "huella1" | "huella2";
+    userID: string;
+    huellaCampo: "huella1" | "huella2";
+    onSuccess: () => void; // 🛑 NUEVO: Propiedad para notificar al padre
 }
 
-const BotonHuellas: React.FC<BotonHuellasProps> = ({ userID, huellaCampo }) => {
-  const [huellaRegistrada, setHuellaRegistrada] = useState<boolean | null>(
-    null
-  );
-  const [mensaje, setMensaje] = useState<string>("");
+// ⚠️ REEMPLAZAR con la IP de tu ESP32 (Módulo de Registro)
+const ESP_API_BASE_URL = "http://192.168.137.246"; 
 
-  useEffect(() => {
-    const verificarHuella = async () => {
-      try {
-        const userDoc = await getDoc(doc(db, "users", userID));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setHuellaRegistrada(!!userData[huellaCampo]);
-        } else {
-          setHuellaRegistrada(false);
+const BotonHuellas: React.FC<BotonHuellasProps> = ({ userID, huellaCampo, onSuccess }) => {
+    const [loading, setLoading] = useState(false);
+    const [mensaje, setMensaje] = useState("Registrar Huella");
+
+    const registrarHuella = async () => {
+        setLoading(true);
+        setMensaje("Esperando huella...");
+
+        try {
+            // 1. Llamar al ESP32 para iniciar el registro
+            const url = `${ESP_API_BASE_URL}/registrarHuella`;
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                // Si el ESP32 no responde, significa que hubo un error de red o en el servidor
+                throw new Error(`Error en el ESP32: ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            if (result.status === "success" && result.huellaID) {
+                const huellaID = parseInt(result.huellaID);
+                
+                // 2. Guardar el ID de la huella en Firebase
+                const userRef = doc(db, "1_USUARIOS", userID);
+                await updateDoc(userRef, {
+                    [huellaCampo]: huellaID,
+                });
+                
+                // 3. Notificar al componente padre que recargue la tabla
+                onSuccess(); // 🛑 LLAMADA CLAVE: Actualiza la tabla padre
+
+                setMensaje(`Huella registrada (ID: ${huellaID})`);
+                message.success(`Huella ${huellaID} guardada para ${userID}.`);
+
+            } else {
+                setMensaje("Error en el sensor.");
+                message.error("Error al registrar la huella en el sensor.");
+            }
+
+        } catch (error) {
+            console.error("Error al registrar huella:", error);
+            setMensaje("Error de Conexión/Sensor");
+            message.error("Error: ¿Está el ESP32 de registro encendido y en línea?");
+        } finally {
+            setLoading(false);
         }
-      } catch (error) {
-        console.error("Error al verificar la huella:", error);
-        setHuellaRegistrada(false);
-      }
     };
 
-    verificarHuella();
-  }, [userID, huellaCampo]);
-
-  const registrarHuella = async () => {
-    try {
-      setMensaje("Coloca tu dedo en el sensor...");
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-      //cambiar a la ip que se ocupe
-      const response = await fetch("http://192.168.1.158/registrarHuella");
-      const result = await response.json();
-
-      if (result.status === "success") {
-        const userDocRef = doc(db, "users", userID);
-        const userDoc = await getDoc(userDocRef);
-
-        if (!userDoc.exists()) {
-          await setDoc(userDocRef, { [huellaCampo]: result.huellaID });
-        } else {
-          await updateDoc(userDocRef, { [huellaCampo]: result.huellaID });
-        }
-
-        setHuellaRegistrada(true);
-        setMensaje(`Huella registrada ✅`);
-        setTimeout(() => {
-          setMensaje(""); // Borra el mensaje después de 5 segundos
-        }, 2500);
-      } else {
-        setMensaje("❌ Error al registrar la huella");
-        setTimeout(() => {
-          setMensaje(""); // Borra el mensaje después de 5 segundos
-        }, 2500);
-      }
-    } catch (error) {
-      console.error("Error al registrar la huella:", error);
-      setMensaje("❌ Error al registrar la huella");
-    }
-  };
-
-  return (
-    <div>
-      <button onClick={registrarHuella} className={styles.registroHuellas}>
-        {huellaRegistrada ? "Actualizar Huella" : "Registrar Huella"}
-      </button>
-      <span style={{ marginLeft: "10px", fontWeight: "bold" }}>
-        {huellaRegistrada ? "✔ Huella registrada" : "❌ Sin huella"}
-      </span>
-      {mensaje && (
-        <div style={{ marginTop: "10px", fontWeight: "bold" }}>{mensaje}</div>
-      )}
-    </div>
-  );
+    return (
+        <Button 
+            onClick={registrarHuella} 
+            loading={loading}
+            style={{ 
+                backgroundColor: loading ? '#f39c12' : '#2ecc71', 
+                color: 'white', 
+                borderRadius: '5px' 
+            }}
+        >
+            {mensaje}
+        </Button>
+    );
 };
 
 export default BotonHuellas;

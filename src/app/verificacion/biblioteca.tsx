@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 
-const NOMBRE_AREA = "Laboratorio"; // Cambia esto según el área
+const NOMBRE_AREA = "Biblioteca"; // Cambia esto según el área
 
 const VerificarHuellaPage: React.FC = () => {
   const [mensaje, setMensaje] = useState("");

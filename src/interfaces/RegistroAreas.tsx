@@ -1,344 +1,243 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import Link from "next/link"; 
+import styles from "@/src/interfaces/RegistroU.module.css";
+import AreaModal from "@/src/components/AreaModal"; 
 import {
-  collection,
-  getDocs,
-  addDoc,
-  deleteDoc,
-  doc,
-  updateDoc,
-  setDoc,
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+  updateDoc,
 } from "firebase/firestore";
 import { db } from "@/src/services/firebaseConfig";
-import { Area } from "./Area";
-import {
-  Table,
-  Button,
-  Modal,
-  Form,
-  Input,
-  Typography,
-  Card,
-  Empty,
-  Space,
-  Tag,
-  Checkbox,
-  message,
-} from "antd";
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  TeamOutlined,
-  UserSwitchOutlined,
-} from "@ant-design/icons";
-export default function RegistroAreas() {
-  const [areas, setAreas] = useState<Area[]>([]);
-  const [usuarios, setUsuarios] = useState<{ id: string; nombre: string }[]>(
-    []
-  );
-  const [permisos, setPermisos] = useState<Record<string, string[]>>({});
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editando, setEditando] = useState<Area | null>(null);
-  const [form] = Form.useForm();
-  const [modalUsuarios, setModalUsuarios] = useState(false);
-  const [modalEdicion, setModalEdicion] = useState(false);
-  const [areaSeleccionada, setAreaSeleccionada] = useState<Area | null>(null);
-  const [usuariosSeleccionados, setUsuariosSeleccionados] = useState<string[]>(
-    []
-  );
+import { message, Card, Button, Typography, Space, theme } from "antd"; // Importamos componentes de Ant Design
+import { TeamOutlined, EditOutlined, DeleteOutlined, AuditOutlined, PlusOutlined, HomeOutlined } from "@ant-design/icons"; // Importamos iconos de Ant Design
 
-  const cargarDatos = async () => {
-    const [areasSnap, usersSnap, permisosSnap] = await Promise.all([
-      getDocs(collection(db, "areas")),
-      getDocs(collection(db, "users")),
-      getDocs(collection(db, "permisos")),
-    ]);
+const { Title, Text } = Typography;
+const { useToken } = theme;
 
-    const areasData = areasSnap.docs.map(
-      (doc: FirebaseFirestore.DocumentData) => ({
-        id: doc.id,
-        ...doc.data(),
-      })
-    ) as Area[];
-    setAreas(areasData);
+interface Area {
+  id: string;
+  nombre: string;
+}
 
-    const usuariosData = usersSnap.docs.map(
-      (doc: FirebaseFirestore.DocumentData) => ({
-        id: doc.id,
-        nombre: doc.data().nombre,
-      })
-    );
-    setUsuarios(usuariosData);
+// Función auxiliar para normalizar nombres de área (usada en la colección de permisos 3_PERMISOS)
+function normalizarTexto(texto: string) {
+  return texto.toLowerCase().replace(/\s+/g, "");
+}
 
-    const permisosPorArea: Record<string, string[]> = {};
-    permisosSnap.docs.forEach((doc: FirebaseFirestore.DocumentData) => {
-      const data = doc.data();
-      if (data.habilitado) {
-        if (!permisosPorArea[data.areaID]) permisosPorArea[data.areaID] = [];
-        permisosPorArea[data.areaID].push(data.userID);
-      }
-    });
-    setPermisos(permisosPorArea);
-  };
+const RegistroAreas: React.FC = () => {
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingArea, setEditingArea] = useState<Area | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  const { token } = useToken(); // Usamos Ant Design theme token
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
+  const fetchAreas = async () => {
+    setLoading(true);
+    try {
+      // LECTURA: Usando la nueva colección '2_AREAS'
+      const querySnapshot = await getDocs(collection(db, "2_AREAS"));
+      const areasData = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        nombre: doc.data().nombre ?? "",
+      }));
+      setAreas(areasData);
+    } catch (error) {
+      console.error("Error al obtener áreas:", error);
+      message.error("Error al cargar las áreas.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const abrirNuevo = () => {
-    setEditando(null);
-    form.resetFields();
-    setModalOpen(true);
-  };
+  useEffect(() => {
+    fetchAreas();
+  }, []);
 
-  const guardarArea = async () => {
-    try {
-      const values = await form.validateFields();
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingArea(null);
+  };
 
-      if (editando) {
-        await updateDoc(doc(db, "areas", editando.id), values);
-        setAreas((prev) =>
-          prev.map((a) => (a.id === editando.id ? { ...a, ...values } : a))
-        );
-      } else {
-        const nueva = await addDoc(collection(db, "areas"), values);
-        setAreas((prev) => [...prev, { id: nueva.id, ...values }]);
-      }
+  const handleSaveArea = async (newArea: Omit<Area, "id">) => {
+    try {
+      if (editingArea) {
+        // EDICIÓN: Actualizar en '2_AREAS'
+        await updateDoc(doc(db, "2_AREAS", editingArea.id), newArea);
+        message.success(`Área "${newArea.nombre}" actualizada.`);
+      } else {
+        // CREACIÓN: Añadir a '2_AREAS'
+        await addDoc(collection(db, "2_AREAS"), newArea);
+        message.success(`Área "${newArea.nombre}" creada.`);
+      }
+      handleCloseModal();
+      // Refrescar para asegurar que los datos en la tabla estén actualizados
+      fetchAreas(); 
+    } catch (error) {
+      console.error("Error al guardar área:", error);
+      message.error("Ocurrió un error al guardar el área.");
+    }
+  };
 
-      setModalOpen(false);
-    } catch {
-      // Validación fallida
-    }
-  };
+  const handleEditArea = (area: Area) => {
+    setEditingArea(area);
+    setIsModalOpen(true);
+  };
 
-  const eliminarArea = async (id: string) => {
-    if (!confirm("¿Eliminar esta área?")) return;
-    await deleteDoc(doc(db, "areas", id));
-    setAreas((prev) => prev.filter((a) => a.id !== id));
-  };
+  const handleDeleteArea = async (id: string, nombre: string) => {
+    if (confirm(`¿Estás seguro de que deseas eliminar el área "${nombre}"?`)) {
+      try {
+        // ELIMINACIÓN: Borrar de '2_AREAS'
+        await deleteDoc(doc(db, "2_AREAS", id));
+        message.success(`Área "${nombre}" eliminada correctamente.`);
+        fetchAreas();
+      } catch (error) {
+        console.error("Error al eliminar área:", error);
+        message.error("Ocurrió un error al eliminar el área.");
+      }
+    }
+  };
 
-  const editarArea = (area: Area) => {
-    setEditando(area);
-    form.setFieldsValue({ nombre: area.nombre, descripcion: area.descripcion });
-    setModalOpen(true);
-  };
+  return (
+    <div style={{ 
+        padding: '20px', 
+        backgroundColor: token.colorBgLayout, 
+        minHeight: "100vh" 
+    }}>
+      <div style={{ 
+          maxWidth: 1000, 
+          margin: "0 auto",
+          padding: '0 10px' // Responsivo: Padding en móviles
+      }}>
+        {/* ENCABEZADO Y BOTONES DE ACCIÓN */}
+        <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            flexWrap: 'wrap', 
+            gap: token.margin, 
+            marginBottom: token.marginLG 
+        }}>
+          {/* Título */}
+          <div>
+            <Title level={2} style={{ margin: 0, color: token.colorPrimary }}>
+                <HomeOutlined /> Gestión de Áreas
+            </Title>
+            <Text type="secondary">
+                Administra las ubicaciones y puntos de acceso del sistema.
+            </Text>
+          </div>
 
-  const abrirEditorUsuarios = (area: Area) => {
-    const actuales = permisos[area.id] || [];
-    setAreaSeleccionada(area);
-    setUsuariosSeleccionados(actuales);
-    setModalEdicion(true);
-  };
-
-  const guardarUsuarios = async () => {
-    if (!areaSeleccionada) return;
-    try {
-      const areaID = areaSeleccionada.id;
-
-      for (const usuario of usuarios) {
-        const habilitado = usuariosSeleccionados.includes(usuario.id);
-        await setDoc(doc(db, "permisos", `${usuario.id}_${areaID}`), {
-          userID: usuario.id,
-          areaID: areaID,
-          habilitado,
-        });
-      }
-
-      setPermisos((prev) => ({
-        ...prev,
-        [areaID]: [...usuariosSeleccionados],
-      }));
-
-      setModalEdicion(false);
-      setAreaSeleccionada(null);
-      message.success("Usuarios actualizados correctamente");
-    } catch (e) {
-      console.error("Error actualizando permisos", e);
-      message.error("Ocurrió un error guardando los accesos");
-    }
-  };
-
-  const columnas = [
-    {
-      title: "Nombre",
-      dataIndex: "nombre",
-      key: "nombre",
-    },
-    {
-      title: "Descripción",
-      dataIndex: "descripcion",
-      key: "descripcion",
-      render: (text: string) =>
-        text || <i style={{ color: "#999" }}>Sin descripción</i>,
-    },
-    {
-      title: "Usuarios con acceso",
-      key: "usuarios",
-      render: (_: unknown, area: Area) => {
-        const usuariosIds = permisos[area.id] || [];
-        const nombres = usuariosIds
-          .map((id) => usuarios.find((u) => u.id === id)?.nombre)
-          .filter(Boolean);
-
-        const primeros = nombres.slice(0, 10);
-        const restantes = nombres.length > 10 ? nombres.length - 10 : 0;
-
-        return (
-          <Space direction="vertical">
-            <Space wrap>
-              {primeros.map((nombre, idx) => (
-                <Tag key={idx} color="geekblue">
-                  {nombre}
-                </Tag>
-              ))}
-              {restantes > 0 && (
-                <Button
-                  type="link"
-                  icon={<TeamOutlined />}
-                  onClick={() => {
-                    setAreaSeleccionada(area);
-                    setModalUsuarios(true);
-                  }}
+          {/* Grupo de Botones de Navegación y Creación */}
+          <Space wrap size="middle" style={{ marginTop: token.marginSM }}>
+            {/* 🛑 BOTÓN NUEVO: Ir a Bitácora */}
+            <Link href="/bitacora" passHref>
+                <Button 
+                    icon={<AuditOutlined />} 
+                    type="default" 
+                    style={{ borderRadius: token.borderRadiusLG }}
                 >
-                  Ver más ({restantes})
+                    Ir a Bitácora
                 </Button>
-              )}
-              {nombres.length === 0 && (
-                <span style={{ color: "#999" }}>Sin usuarios</span>
-              )}
-            </Space>
-            <Button
-              size="small"
-              icon={<UserSwitchOutlined />}
-              onClick={() => abrirEditorUsuarios(area)}
+            </Link>
+            
+            <Link href="/registro-usuarios" passHref>
+                <Button icon={<TeamOutlined />} type="default" style={{ borderRadius: token.borderRadiusLG }}>
+                    Ir a Usuarios
+                </Button>
+            </Link>
+            
+            <Button 
+                onClick={handleOpenModal} 
+                type="primary" 
+                style={{ borderRadius: token.borderRadiusLG }}
+                icon={<PlusOutlined />}
             >
-              Editar usuarios
+                Nueva Área
             </Button>
           </Space>
-        );
-      },
-    },
-    {
-      title: "Acciones",
-      key: "acciones",
-      render: (_: unknown, record: Area) => (
-        <Space>
-          <Button icon={<EditOutlined />} onClick={() => editarArea(record)}>
-            Editar
-          </Button>
-          <Button
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => eliminarArea(record.id)}
-          >
-            Eliminar
-          </Button>
-        </Space>
-      ),
-    },
-  ];
-
-  return (
-    <div
-      style={{ padding: 32, backgroundColor: "#f6f8fa", minHeight: "100vh" }}
-    >
-      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginBottom: 24,
-          }}
-        >
-          <div>
-            <Typography.Title level={3} style={{ margin: 0 }}>
-              Gestión de Áreas
-            </Typography.Title>
-            <Typography.Text type="secondary">
-              Administra las áreas de tu organización
-            </Typography.Text>
-          </div>
-          <Button type="primary" icon={<PlusOutlined />} onClick={abrirNuevo}>
-            Nueva Área
-          </Button>
         </div>
 
-        <Card
-          style={{ borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
-        >
-          {areas.length === 0 ? (
-            <Empty description="No hay áreas registradas" />
+        {/* MODAL DE ÁREAS */}
+        {/* Asumo que AreaModal existe y es compatible con las props */}
+        <AreaModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          onSave={handleSaveArea}
+          area={editingArea}
+        />
+
+        {/* CONTENEDOR DE LA TABLA */}
+        <Card style={{ 
+            borderRadius: token.borderRadiusLG, 
+            boxShadow: token.boxShadowSecondary 
+        }}>
+          {loading ? (
+            <div className={styles.loading}>Cargando áreas...</div>
           ) : (
-            <Table
-              dataSource={areas}
-              columns={columnas}
-              rowKey="id"
-              pagination={{ pageSize: 6 }}
-            />
+            <div className={styles.tableContainer} style={{ minHeight: 'auto' }}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={{ width: "35%" }}>Nombre del Área</th>
+                    <th style={{ width: "35%" }} className={styles['hidden-sm']}>ID de Permiso (DB)</th>
+                    <th style={{ width: "30%" }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {areas.length > 0 ? (
+                    areas.map((area) => (
+                      <tr key={area.id}>
+                        <td>{area.nombre || "-"}</td>
+                        {/* Mostrar el ID Normalizado, que es el que se usa en 3_PERMISOS */}
+                        <td className={styles['hidden-sm']}>
+                            {normalizarTexto(area.nombre)}
+                        </td> 
+                        <td>
+                          {/* 🛑 USO DE COMPONENTES BUTTON DE ANTD PARA ACCIONES */}
+                          <Space size={5} direction="horizontal" wrap> 
+                            <Button
+                                onClick={() => handleEditArea(area)}
+                                size="small"
+                                icon={<EditOutlined />}
+                                title="Editar Área"
+                            >
+                                Editar
+                            </Button>
+                            <Button
+                                onClick={() => handleDeleteArea(area.id, area.nombre)}
+                                size="small"
+                                danger
+                                icon={<DeleteOutlined />}
+                                title="Eliminar Área"
+                            >
+                                Eliminar
+                            </Button>
+                          </Space>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={3} className={styles.noDatos}>
+                        No hay áreas registradas
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
         </Card>
-
-        <Modal
-          title={editando ? "Editar Área" : "Nueva Área"}
-          open={modalOpen}
-          onCancel={() => setModalOpen(false)}
-          onOk={guardarArea}
-          okText={editando ? "Actualizar" : "Guardar"}
-        >
-          <Form layout="vertical" form={form}>
-            <Form.Item
-              label="Nombre"
-              name="nombre"
-              rules={[{ required: true, message: "El nombre es obligatorio" }]}
-            >
-              <Input placeholder="Nombre del área" />
-            </Form.Item>
-            <Form.Item label="Descripción" name="descripcion">
-              <Input placeholder="Breve descripción (opcional)" />
-            </Form.Item>
-          </Form>
-        </Modal>
-
-        <Modal
-          title={`Usuarios con acceso a: ${areaSeleccionada?.nombre}`}
-          open={modalUsuarios}
-          onCancel={() => setModalUsuarios(false)}
-          footer={null}
-        >
-          <ul>
-            {(permisos[areaSeleccionada?.id || ""] || [])
-              .map((id) => usuarios.find((u) => u.id === id)?.nombre)
-              .filter(Boolean)
-              .map((nombre, idx) => (
-                <li key={idx}>{nombre}</li>
-              ))}
-          </ul>
-        </Modal>
-
-        <Modal
-          title={`Editar usuarios para: ${areaSeleccionada?.nombre}`}
-          open={modalEdicion}
-          onCancel={() => setModalEdicion(false)}
-          onOk={guardarUsuarios}
-          okText="Guardar"
-          cancelText="Cancelar"
-        >
-          <Checkbox.Group
-            value={usuariosSeleccionados}
-            onChange={(val) => setUsuariosSeleccionados(val as string[])}
-          >
-            {usuarios
-              .sort((a, b) => a.nombre.localeCompare(b.nombre))
-              .map((user) => (
-                <div key={user.id} style={{ marginBottom: 6 }}>
-                  <Checkbox value={user.id}>{user.nombre}</Checkbox>
-                </div>
-              ))}
-          </Checkbox.Group>
-        </Modal>
       </div>
-    </div>
-  );
-}
+    </div>
+  );
+};
+
+export default RegistroAreas;

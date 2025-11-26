@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import React, { useState, useEffect, useCallback } from "react"; // Importamos useCallback
+import Link from "next/link"; 
 import styles from "@/src/interfaces/RegistroU.module.css";
 import NewUserModal from "@/src/components/NewUserModal";
 import BotonHuellas from "@/src/components/BotonHuellas";
@@ -22,8 +22,18 @@ interface User {
   id: string;
   nombre: string;
   matricula: string;
-  huella1: string;
-  huella2: string;
+  huella1: number;
+  huella2: number;
+}
+
+interface UserFormData {
+  nombre: string;
+  matricula: string;
+}
+
+// Función auxiliar para normalizar nombres de área
+function normalizarTexto(texto: string) {
+  return texto.toLowerCase().replace(/\s+/g, "");
 }
 
 const RegistroUsers: React.FC = () => {
@@ -42,53 +52,55 @@ const RegistroUsers: React.FC = () => {
     Record<string, string[]>
   >({});
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      setLoading(true);
-      try {
-        const querySnapshot = await getDocs(collection(db, "users"));
-        const usersData = querySnapshot.docs
-          .map((doc: QueryDocumentSnapshot) => {
-            ///error aqui
-            const data = doc.data();
-            return {
-              id: doc.id,
-              nombre: data.nombre ?? "",
-              matricula: data.matricula ?? "",
-              huella1: data.huella1 ?? "",
-              huella2: data.huella2 ?? "",
-            };
-          })
-          .filter((user: User) => user.nombre !== "" && user.matricula !== "");
+  // Función para obtener y establecer todos los datos de usuarios y permisos
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Lectura de usuarios
+      const querySnapshot = await getDocs(collection(db, "1_USUARIOS")); 
+      const usersData = querySnapshot.docs
+        .map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            nombre: data.nombre ?? "",
+            matricula: data.matricula ?? "",
+            huella1: data.huella1 as number ?? 0, 
+            huella2: data.huella2 as number ?? 0, 
+          };
+        })
+        .filter((user) => user.nombre !== "" && user.matricula !== "");
 
-        setUsers(usersData);
+      setUsers(usersData);
 
-        const permisosSnap = await getDocs(collection(db, "permisos"));
-        const permisos = permisosSnap.docs.map((doc: QueryDocumentSnapshot) =>
-          doc.data()
-        );
-        interface Permiso {
-          userID: string;
-          areaID: string;
-          habilitado: boolean;
+      // Lectura de permisos
+      const permisosSnap = await getDocs(collection(db, "3_PERMISOS"));
+      const permisos = permisosSnap.docs.map((doc) => doc.data());
+      const agrupados: Record<string, string[]> = {};
+      permisos.forEach((perm) => {
+        if (perm.habilitado) {
+          if (!agrupados[perm.userID]) agrupados[perm.userID] = [];
+          agrupados[perm.userID].push(perm.areaID);
         }
-        const agrupados: Record<string, string[]> = {};
-        permisos.forEach((perm: Permiso) => {
-          if (perm.habilitado) {
-            if (!agrupados[perm.userID]) agrupados[perm.userID] = [];
-            agrupados[perm.userID].push(perm.areaID);
-          }
-        });
-        setPermisosPorUsuario(agrupados);
-      } catch (error) {
-        console.error("Error al obtener usuarios:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      });
+      setPermisosPorUsuario(agrupados);
 
+    } catch (error) {
+      console.error("Error al obtener datos:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []); // Dependencias vacías, solo se crea una vez
+
+  useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [fetchUsers]); // Ejecutamos la función al montar el componente
+
+  // 🛑 NUEVA FUNCIÓN: Recarga los datos cuando se actualiza una huella
+  const handleUserUpdate = () => {
+      fetchUsers();
+      message.success("Huella registrada y tabla actualizada.");
+  };
 
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => {
@@ -96,22 +108,27 @@ const RegistroUsers: React.FC = () => {
     setEditingUser(null);
   };
 
-  const handleSaveUser = async (newUser: Omit<User, "id">) => {
+  const handleSaveUser = async (data: UserFormData & { id?: string }) => {
     try {
-      if (editingUser) {
-        await updateDoc(doc(db, "users", editingUser.id), newUser);
-        setUsers((prevUsers) =>
-          prevUsers.map((user) =>
-            user.id === editingUser.id
-              ? { ...newUser, id: editingUser.id }
-              : user
-          )
-        );
+      const { id, ...userData } = data;
+
+      if (id) {
+        // EDITAR: Actualizar nombre y matrícula
+        await updateDoc(doc(db, "1_USUARIOS", id), userData);
       } else {
-        const docRef = await addDoc(collection(db, "users"), newUser);
-        setUsers((prevUsers) => [...prevUsers, { ...newUser, id: docRef.id }]);
+        // CREAR NUEVO USUARIO: Inicializar huellas a 0
+        const newUserDocument = {
+            ...userData,
+            huella1: 0, 
+            huella2: 0, 
+        };
+        await addDoc(collection(db, "1_USUARIOS"), newUserDocument); 
       }
+
+      // Recargar la lista después de crear o editar
+      await fetchUsers(); 
       handleCloseModal();
+
     } catch (error) {
       console.error("Error al guardar usuario:", error);
       alert("Ocurrió un error al guardar el usuario.");
@@ -126,8 +143,8 @@ const RegistroUsers: React.FC = () => {
   const handleDeleteUser = async (id: string) => {
     if (confirm("¿Estás seguro de que deseas eliminar este usuario?")) {
       try {
-        await deleteDoc(doc(db, "users", id));
-        setUsers((prevUsers) => prevUsers.filter((user) => user.id !== id));
+        await deleteDoc(doc(db, "1_USUARIOS", id)); 
+        await fetchUsers(); // Recargar la lista después de eliminar
       } catch (error) {
         console.error("Error al eliminar usuario:", error);
         alert("Ocurrió un error al eliminar el usuario.");
@@ -139,20 +156,16 @@ const RegistroUsers: React.FC = () => {
     setSelectedUser(user);
     setModalPermisosVisible(true);
 
-    const areasSnap = await getDocs(collection(db, "areas"));
-    const todasLasAreas = areasSnap.docs.map((doc: QueryDocumentSnapshot) => ({
-      id: doc.id,
+    // Cargar áreas de la colección '2_AREAS'
+    const areasSnap = await getDocs(collection(db, "2_AREAS"));
+    const todasLasAreas = areasSnap.docs.map((doc) => ({
+      id: normalizarTexto(doc.data().nombre), 
       nombre: doc.data().nombre,
     }));
     setAreas(todasLasAreas);
 
-    interface Permiso {
-      userID: string;
-      areaID: string;
-      habilitado: boolean;
-    }
-
-    const permisosSnap = await getDocs(collection(db, "permisos"));
+    // Cargar permisos actuales del usuario de '3_PERMISOS'
+    const permisosSnap = await getDocs(collection(db, "3_PERMISOS"));
     const permisosDelUsuario = permisosSnap.docs
       .map((doc: QueryDocumentSnapshot) => doc.data() as Permiso)
       .filter((perm: Permiso) => perm.userID === user.id && perm.habilitado)
@@ -165,19 +178,18 @@ const RegistroUsers: React.FC = () => {
     try {
       if (!selectedUser) return;
 
+      // Guardar/Actualizar permisos en la colección '3_PERMISOS'
       for (const area of areas) {
         const habilitado = permisosSeleccionados.includes(area.id);
-        await setDoc(doc(db, "permisos", `${selectedUser.id}_${area.id}`), {
+        await setDoc(doc(db, "3_PERMISOS", `${selectedUser.id}_${area.id}`), {
           userID: selectedUser.id,
           areaID: area.id,
           habilitado,
         });
       }
 
-      setPermisosPorUsuario((prev) => ({
-        ...prev,
-        [selectedUser.id]: [...permisosSeleccionados],
-      }));
+      // Volver a cargar la lista completa para actualizar la columna de permisos
+      await fetchUsers(); 
 
       message.success("Permisos actualizados correctamente");
       setModalPermisosVisible(false);
@@ -244,16 +256,18 @@ const RegistroUsers: React.FC = () => {
                     <td>{user.matricula || "-"}</td>
                     <td>
                       {user.huella1 ? (
-                        "✅ Registrada"
+                        "✅ Registrada " 
                       ) : (
-                        <BotonHuellas userID={user.id} huellaCampo="huella1" />
+                        // 🛑 BotonHuellas con el nuevo prop onSuccess
+                        <BotonHuellas userID={user.id} huellaCampo="huella1" onSuccess={handleUserUpdate} />
                       )}
                     </td>
                     <td>
                       {user.huella2 ? (
-                        "✅ Registrada"
+                        "✅ Registrada " 
                       ) : (
-                        <BotonHuellas userID={user.id} huellaCampo="huella2" />
+                        // 🛑 BotonHuellas con el nuevo prop onSuccess
+                        <BotonHuellas userID={user.id} huellaCampo="huella2" onSuccess={handleUserUpdate} />
                       )}
                     </td>
                     <td>

@@ -7,8 +7,8 @@ interface User {
   id: string;
   nombre: string;
   matricula: string;
-  huella1: string;
-  huella2: string;
+  huella1: number;
+  huella2: number;
 }
 
 interface ModalProps {

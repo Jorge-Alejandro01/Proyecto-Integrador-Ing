@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { Modal, Form, Input, message } from "antd";
+import { Modal, Form, Input } from "antd";
 
 interface User {
   id: string;
@@ -18,7 +18,12 @@ interface ModalProps {
   user?: User | null;
 }
 
-const NewUserModal: React.FC<ModalProps> = ({ isOpen, onClose, onSave, user }) => {
+const NewUserModal: React.FC<ModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  user,
+}) => {
   const [form] = Form.useForm(); // Mover esta línea dentro del componente
 
   useEffect(() => {
@@ -33,12 +38,10 @@ const NewUserModal: React.FC<ModalProps> = ({ isOpen, onClose, onSave, user }) =
   }, [user, isOpen, form]);
 
   const handleSubmit = async () => {
-    try {
+    {
       const values = await form.validateFields();
       onSave(user ? { ...values, id: user.id } : values);
       onClose();
-    } catch (error) {
-      message.error("Por favor complete los campos requeridos");
     }
   };
 
@@ -51,7 +54,9 @@ const NewUserModal: React.FC<ModalProps> = ({ isOpen, onClose, onSave, user }) =
       okText={user ? "Actualizar" : "Guardar"}
       cancelText="Cancelar"
     >
-      <Form layout="vertical" form={form}> {/* Asegúrate de pasar la prop form */}
+      <Form layout="vertical" form={form}>
+        {" "}
+        {/* Asegúrate de pasar la prop form */}
         <Form.Item
           label="Nombre Completo"
           name="nombre"

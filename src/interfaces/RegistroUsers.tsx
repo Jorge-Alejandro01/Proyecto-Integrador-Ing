@@ -16,6 +16,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/src/services/firebaseConfig";
 import { Modal, Checkbox, message, Tag } from "antd";
+import { QueryDocumentSnapshot } from "firebase-functions/firestore";
 
 interface User {
   id: string;
@@ -43,9 +44,13 @@ const RegistroUsers: React.FC = () => {
 
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [areas, setAreas] = useState<{ id: string; nombre: string }[]>([]);
-  const [permisosSeleccionados, setPermisosSeleccionados] = useState<string[]>([]);
+  const [permisosSeleccionados, setPermisosSeleccionados] = useState<string[]>(
+    []
+  );
   const [modalPermisosVisible, setModalPermisosVisible] = useState(false);
-  const [permisosPorUsuario, setPermisosPorUsuario] = useState<Record<string, string[]>>({});
+  const [permisosPorUsuario, setPermisosPorUsuario] = useState<
+    Record<string, string[]>
+  >({});
 
   // Función para obtener y establecer todos los datos de usuarios y permisos
   const fetchUsers = useCallback(async () => {
@@ -162,9 +167,9 @@ const RegistroUsers: React.FC = () => {
     // Cargar permisos actuales del usuario de '3_PERMISOS'
     const permisosSnap = await getDocs(collection(db, "3_PERMISOS"));
     const permisosDelUsuario = permisosSnap.docs
-      .map((doc) => doc.data())
-      .filter((perm) => perm.userID === user.id && perm.habilitado)
-      .map((perm) => perm.areaID);
+      .map((doc: QueryDocumentSnapshot) => doc.data() as Permiso)
+      .filter((perm: Permiso) => perm.userID === user.id && perm.habilitado)
+      .map((perm: Permiso) => perm.areaID);
 
     setPermisosSeleccionados(permisosDelUsuario);
   };
@@ -267,7 +272,9 @@ const RegistroUsers: React.FC = () => {
                     </td>
                     <td>
                       {permisosPorUsuario[user.id]?.length ? (
-                        <Tag color="blue">{permisosPorUsuario[user.id].length} asignado(s)</Tag>
+                        <Tag color="blue">
+                          {permisosPorUsuario[user.id].length} asignado(s)
+                        </Tag>
                       ) : (
                         <Tag color="red">Sin acceso</Tag>
                       )}

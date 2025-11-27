@@ -24,7 +24,7 @@ const AreaModal: React.FC<ModalProps> = ({ isOpen, onClose, onSave, area }) => {
         if (area) {
         form.setFieldsValue({
             nombre: area.nombre,
-            descripcion: (area as any).descripcion || "", // Asumo que descripción existe
+            descripcion: area.descripcion || "", //cambio aqui para ejecutar en vercel
         });
         } else {
         form.resetFields();
@@ -36,9 +36,9 @@ const AreaModal: React.FC<ModalProps> = ({ isOpen, onClose, onSave, area }) => {
         const values = await form.validateFields();
         onSave(values as Omit<Area, "id">);
         onClose();
-        } catch (error) {
-        // Ant Design ya maneja la visualización de errores de validación
-        message.error("Por favor complete los campos requeridos.");
+        } catch (_error) {
+          console.log("Error de validación:", _error); //cambio aqui para ejecutar en vercel
+          message.error("Por favor complete los campos requeridos.");
         }
     };
 

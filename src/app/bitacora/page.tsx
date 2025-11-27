@@ -27,7 +27,7 @@ const formatTimestamp = (isoString: string) => {
     const date = new Date(isoString);
     // Formato legible: Ej. 26/11/2025, 12:09:34 a. m.
     return date.toLocaleString(); 
-  } catch (e) {
+  } catch {
     return "Fecha inválida";
   }
 };

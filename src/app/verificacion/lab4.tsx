@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 
-const NOMBRE_AREA = "Laboratio 4"; // Cambia esto según el área
+const NOMBRE_AREA = "Laboratorio 4"; // Cambia esto según el área
 
 const VerificarHuellaPage: React.FC = () => {
   const [mensaje, setMensaje] = useState("");
@@ -16,7 +16,7 @@ const VerificarHuellaPage: React.FC = () => {
       // 1. Esperamos que el usuario ponga el dedo y ESP lea la huella
       await new Promise((resolve) => setTimeout(resolve, 5000));
 
-      const response = await fetch("http://192.168.137.246/verificarHuella");
+      const response = await fetch("http://192.168.2.246/verificarHuella");
       const texto = await response.text();
 
       if (!response.ok) {

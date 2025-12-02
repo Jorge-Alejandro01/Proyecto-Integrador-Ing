@@ -12,7 +12,7 @@ interface BotonHuellasProps {
 }
 
 // ⚠️ REEMPLAZAR con la IP de tu ESP32 (Módulo de Registro)
-const ESP_API_BASE_URL = "http://192.168.2.246"; 
+const ESP_API_BASE_URL = "http://192.168.1.246"; 
 
 const BotonHuellas: React.FC<BotonHuellasProps> = ({ userID, huellaCampo, onSuccess }) => {
     const [loading, setLoading] = useState(false);
